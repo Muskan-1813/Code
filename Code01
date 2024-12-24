@@ -1,0 +1,62 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <zlib.h>
+
+void compressFile(const char *source, const char *destination) {
+    FILE *sourceFile = fopen(source, "rb");
+    FILE *destFile = fopen(destination, "wb");
+
+    if (!sourceFile || !destFile) {
+        printf("Error: Unable to open file.\n");
+        exit(1);
+    }
+
+    z_stream stream;
+    stream.zalloc = Z_NULL;
+    stream.zfree = Z_NULL;
+    stream.opaque = Z_NULL;
+
+    if (deflateInit(&stream, Z_BEST_COMPRESSION) != Z_OK) {
+        printf("Error: Compression initialization failed.\n");
+        exit(1);
+    }
+
+    unsigned char input[1024];
+    unsigned char output[1024];
+
+    int bytesRead;
+    do {
+        bytesRead = fread(input, 1, sizeof(input), sourceFile);
+        stream.avail_in = bytesRead;
+        stream.next_in = input;
+
+        do {
+            stream.avail_out = sizeof(output);
+            stream.next_out = output;
+
+            deflate(&stream, bytesRead ? Z_NO_FLUSH : Z_FINISH);
+
+            fwrite(output, 1, sizeof(output) - stream.avail_out, destFile);
+        } while (stream.avail_out == 0);
+
+    } while (bytesRead > 0);
+
+    deflateEnd(&stream);
+    fclose(sourceFile);
+    fclose(destFile);
+}
+
+int main() {
+    char source[100], destination[100];
+
+    printf("Enter the source file name: ");
+    scanf("%s", source);
+    printf("Enter the destination file name: ");
+    scanf("%s", destination);
+
+    compressFile(source, destination);
+
+    printf("File compression completed successfully.\n");
+
+    return 0;
+}
